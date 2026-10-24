@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma')
+const { detectPRs } = require('../services/recordService')
 const inc = { routine:{ select:{ id:true, name:true, routineExercises:{ orderBy:{ order:'asc' }, select:{ exerciseId:true, targetSets:true, targetReps:true, restSeconds:true, exercise:{ select:{ id:true, name:true, muscleGroup:true, images:true } } } } } }, setLogs:{ include:{ exercise:{ select:{ id:true, name:true, muscleGroup:true, images:true } } }, orderBy:{ createdAt:'asc' } } }
 
 exports.list = async (req,res) => { try { const { limit=20,page=1 } = req.query; const skip=(parseInt(page)-1)*parseInt(limit); const [data,total]=await Promise.all([prisma.workoutSession.findMany({ where:{ userId:req.user.id }, include:inc, orderBy:{ startedAt:'desc' }, skip, take:parseInt(limit) }),prisma.workoutSession.count({ where:{ userId:req.user.id } })]); res.json({ data, pagination:{ total, page:parseInt(page), pages:Math.ceil(total/limit) } }) } catch { res.status(500).json({ error:'Error' }) } }
@@ -17,7 +18,9 @@ exports.addSet = async (req, res) => {
   try {
     const { exerciseId, setNumber, weightKg, reps, rpe, restSeconds, isSuperset, isWarmup, isFailure, notes } = req.body
     if (!exerciseId || weightKg===undefined || reps===undefined) return res.status(400).json({ error:'Faltan datos' })
-    res.status(201).json({ data: await prisma.setLog.create({ data:{ sessionId:req.params.id, exerciseId, setNumber:setNumber||1, weightKg:parseFloat(weightKg), reps:parseInt(reps), rpe:rpe!==undefined?parseFloat(rpe):null, restSeconds:restSeconds?parseInt(restSeconds):null, isSuperset:isSuperset||false, isWarmup:isWarmup||false, isFailure:isFailure||false, notes }, include:{ exercise:{ select:{ name:true, muscleGroup:true } } } }) })
+    const set = await prisma.setLog.create({ data:{ sessionId:req.params.id, exerciseId, setNumber:setNumber||1, weightKg:parseFloat(weightKg), reps:parseInt(reps), rpe:rpe!==undefined?parseFloat(rpe):null, restSeconds:restSeconds?parseInt(restSeconds):null, isSuperset:isSuperset||false, isWarmup:isWarmup||false, isFailure:isFailure||false, notes }, include:{ exercise:{ select:{ name:true, muscleGroup:true } } } })
+    const prs = set.isWarmup ? { types: [] } : await detectPRs({ userId: req.user.id, exerciseId, setId: set.id, weightKg: set.weightKg, reps: set.reps })
+    res.status(201).json({ data: { ...set, prs } })
   } catch (err) { res.status(500).json({ error:err.message }) }
 }
 

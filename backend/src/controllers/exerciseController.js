@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma')
+const { epley, userRecords } = require('../services/recordService')
 
 const IMG = '/exercise-images/'
 const LIGERO = {
@@ -87,7 +88,12 @@ exports.getHistory = async (req, res) => {
       if (!bySession[key]) bySession[key] = { date: set.session.startedAt, sets: [] }
       bySession[key].sets.push(set)
     }
-    const sessions = Object.values(bySession).sort((a,b) => new Date(a.date)-new Date(b.date)).map(s => ({ date: s.date, maxWeight: Math.max(...s.sets.map(x=>x.weightKg)), totalVolume: s.sets.reduce((sum,x)=>sum+x.weightKg*x.reps,0), totalSets: s.sets.length, avgReps: Math.round(s.sets.reduce((sum,x)=>sum+x.reps,0)/s.sets.length) }))
+    const sessions = Object.values(bySession).sort((a,b) => new Date(a.date)-new Date(b.date)).map(s => ({ date: s.date, maxWeight: Math.max(...s.sets.map(x=>x.weightKg)), bestE1rm: Math.max(0, ...s.sets.map(x=>epley(x.weightKg,x.reps)||0)) || null, totalVolume: s.sets.reduce((sum,x)=>sum+x.weightKg*x.reps,0), totalSets: s.sets.length, avgReps: Math.round(s.sets.reduce((sum,x)=>sum+x.reps,0)/s.sets.length) }))
     res.json({ data: sessions })
   } catch (err) { res.status(500).json({ error: 'Error' }) }
+}
+
+exports.records = async (req, res) => {
+  try { res.json({ data: await userRecords(req.user.id) }) }
+  catch (err) { console.error(err); res.status(500).json({ error: 'Error' }) }
 }
