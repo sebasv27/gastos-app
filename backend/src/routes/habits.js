@@ -1,0 +1,11 @@
+const router = require('express').Router()
+const auth   = require('../middleware/auth')
+const ctrl   = require('../controllers/habitController')
+router.use(auth)
+router.get('/', ctrl.list)
+router.post('/', ctrl.create)
+router.post('/:id/toggle', ctrl.toggle)
+router.get('/:id/streak', ctrl.getStreak)
+router.put('/:id', ctrl.update)
+router.delete('/:id', ctrl.remove)
+module.exports = router

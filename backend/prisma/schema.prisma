@@ -1,0 +1,480 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  password       String
+  monthlyIncome  Float     @default(3000000)
+  currency       String    @default("COP")
+  pushToken      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  transactions     Transaction[]
+  budgets          Budget[]
+  goals            Goal[]
+  alerts           Alert[]
+  categories       Category[]
+  fitnessProfile   FitnessProfile?
+  bodyLogs         BodyLog[]
+  routines         Routine[]
+  workoutSessions  WorkoutSession[]
+  meals            Meal[]
+  exercises        Exercise[]
+  savedRecipes      SavedRecipe[]
+  tasks             Task[]
+  habits            Habit[]
+  habitLogs         HabitLog[]
+  routineBlocks     RoutineBlock[]
+  pomodoroSessions  PomodoroSession[]
+  telegramChatId    String? // agregado
+
+  @@map("users")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  icon      String   @default("circle")
+  color     String   @default("#0F6E56")
+  isDefault Boolean  @default(false)
+  userId    String?
+  createdAt DateTime @default(now())
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id          String            @id @default(cuid())
+  amount      Float
+  description String
+  type        TransactionType   @default(EXPENSE)
+  source      TransactionSource @default(MANUAL)
+  date        DateTime          @default(now())
+  notes       String?
+  receiptUrl  String?
+  rawNotif    String?
+  userId      String
+  categoryId  String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("transactions")
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  amount     Float
+  spent      Float    @default(0)
+  month      Int
+  year       Int
+  alertAt    Float    @default(0.8)
+  userId     String
+  categoryId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, categoryId, month, year])
+  @@map("budgets")
+}
+
+model Goal {
+  id           String     @id @default(cuid())
+  name         String
+  targetAmount Float
+  savedAmount  Float      @default(0)
+  deadline     DateTime?
+  icon         String     @default("target")
+  color        String     @default("#185FA5")
+  status       GoalStatus @default(ACTIVE)
+  userId       String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("goals")
+}
+
+model Alert {
+  id        String    @id @default(cuid())
+  type      AlertType
+  message   String
+  isRead    Boolean   @default(false)
+  metadata  Json?
+  userId    String
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+}
+
+model FitnessProfile {
+  id             String        @id @default(cuid())
+  userId         String        @unique
+  sex            Sex           @default(MALE)
+  birthDate      DateTime?
+  heightCm       Float?
+  activityLevel  ActivityLevel @default(MODERATE)
+  goal           FitnessGoal   @default(RECOMP)
+  tdee           Float?
+  targetCalories Float?
+  targetProteinG Float?
+  targetCarbsG   Float?
+  targetFatG     Float?
+  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("fitness_profiles")
+}
+
+model BodyLog {
+  id         String   @id @default(cuid())
+  userId     String
+  weightKg   Float
+  bodyFatPct Float?
+  notes      String?
+  date       DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("body_logs")
+}
+
+model Exercise {
+  id          String   @id @default(cuid())
+  name        String
+  muscleGroup String
+  equipment   String?
+  nameEn           String?
+  externalId       String?  @unique
+  category         String?
+  level            String?
+  force            String?
+  mechanic         String?
+  primaryMuscles   String[] @default([])
+  secondaryMuscles String[] @default([])
+  instructions     String[] @default([])
+  instructionsEn   String[] @default([])
+  images           String[] @default([])
+  isDefault   Boolean  @default(false)
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  user             User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routineExercises RoutineExercise[]
+  setLogs          SetLog[]
+
+  @@map("exercises")
+}
+
+model Routine {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routineExercises RoutineExercise[]
+  workoutSessions  WorkoutSession[]
+
+  @@map("routines")
+}
+
+model RoutineExercise {
+  id            String  @id @default(cuid())
+  routineId     String
+  exerciseId    String
+  order         Int     @default(0)
+  targetSets    Int     @default(3)
+  targetReps    String  @default("8-12")
+  restSeconds   Int     @default(90)
+  isSuperset    Boolean @default(false)
+  supersetGroup Int?
+  notes         String?
+
+  routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@map("routine_exercises")
+}
+
+model WorkoutSession {
+  id           String    @id @default(cuid())
+  userId       String
+  routineId    String?
+  name         String
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  notes        String?
+  bodyweightKg Float?
+  createdAt    DateTime  @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routine Routine? @relation(fields: [routineId], references: [id])
+  setLogs SetLog[]
+
+  @@map("workout_sessions")
+}
+
+model SetLog {
+  id          String   @id @default(cuid())
+  sessionId   String
+  exerciseId  String
+  setNumber   Int
+  weightKg    Float
+  reps        Int
+  rpe         Float?
+  restSeconds Int?
+  isSuperset  Boolean  @default(false)
+  isWarmup    Boolean  @default(false)
+  isFailure   Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise Exercise       @relation(fields: [exerciseId], references: [id])
+
+  @@map("set_logs")
+}
+
+model Meal {
+  id        String     @id @default(cuid())
+  userId    String
+  name      String
+  mealType  MealType   @default(OTHER)
+  calories  Float
+  proteinG  Float
+  carbsG    Float
+  fatG      Float
+  source    MealSource @default(MANUAL)
+  photoUrl  String?
+  date      DateTime   @default(now())
+  createdAt DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("meals")
+}
+
+model SavedRecipe {
+  id             String    @id @default(cuid())
+  userId         String
+  name           String
+  mealType       String
+  emoji          String    @default("🍽️")
+  style          String?
+  difficulty     Int       @default(1)
+  prepMinutes    Int       @default(0)
+  cookMinutes    Int       @default(0)
+  servings       Int       @default(1)
+  calories       Float
+  proteinG       Float
+  carbsG         Float
+  fatG           Float
+  whyRecommended String?
+  ingredients    Json
+  steps          Json
+  tips           Json      @default("[]")
+  tags           Json      @default("[]")
+  searchQuery    String?
+  isFavorite     Boolean   @default(false)
+  timesUsed      Int       @default(0)
+  lastUsedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("saved_recipes")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum TransactionSource {
+  MANUAL
+  NOTIFICATION
+  RECEIPT_OCR
+  IMPORT
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+enum AlertType {
+  BUDGET_WARNING
+  BUDGET_EXCEEDED
+  GOAL_REACHED
+  WEEKLY_SUMMARY
+  UNUSUAL_EXPENSE
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum FitnessGoal {
+  CUT
+  RECOMP
+  BULK
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  OTHER
+}
+
+enum MealSource {
+  MANUAL
+  PHOTO_OCR
+  IMPORT
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  priority    Priority   @default(MEDIUM)
+  status      TaskStatus @default(PENDING)
+  dueDate     DateTime?
+  dueTime     String?
+  completedAt DateTime?
+  tags        Json       @default("[]")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("tasks")
+}
+
+model Habit {
+  id           String         @id @default(cuid())
+  userId       String
+  name         String
+  emoji        String         @default("⭐")
+  color        String         @default("#0F6E56")
+  frequency    HabitFrequency @default(DAILY)
+  targetDays   Json           @default("[1,2,3,4,5,6,7]")
+  reminderTime String?
+  streak       Int            @default(0)
+  bestStreak   Int            @default(0)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs         HabitLog[]
+  @@map("habits")
+}
+
+model HabitLog {
+  id        String   @id @default(cuid())
+  habitId   String
+  userId    String
+  date      DateTime @default(now())
+  completed Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([habitId, userId, date])
+  @@map("habit_logs")
+}
+
+model RoutineBlock {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  emoji       String   @default("📌")
+  startTime   String
+  endTime     String
+  days        Json     @default("[1,2,3,4,5,6,7]")
+  color       String   @default("#185FA5")
+  reminderMin Int      @default(5)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("routine_blocks")
+}
+
+model PomodoroSession {
+  id           String         @id @default(cuid())
+  userId       String
+  taskId       String?
+  title        String         @default("Sesión de trabajo")
+  workMinutes  Int            @default(25)
+  breakMinutes Int            @default(5)
+  rounds       Int            @default(0)
+  totalMinutes Int            @default(0)
+  status       PomodoroStatus @default(COMPLETED)
+  startedAt    DateTime       @default(now())
+  finishedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("pomodoro_sessions")
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+}
+enum PomodoroStatus {
+  COMPLETED
+  ABANDONED
+}

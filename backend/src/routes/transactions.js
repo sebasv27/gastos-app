@@ -1,0 +1,12 @@
+const router = require('express').Router()
+const { body } = require('express-validator')
+const ctrl = require('../controllers/transactionController')
+const auth = require('../middleware/auth')
+router.use(auth)
+router.get('/', ctrl.list)
+router.post('/', [body('amount').isFloat({ min:1 }), body('description').trim().notEmpty()], ctrl.create)
+router.get('/export', ctrl.exportCSV)
+router.get('/:id', ctrl.getOne)
+router.put('/:id', ctrl.update)
+router.delete('/:id', ctrl.remove)
+module.exports = router

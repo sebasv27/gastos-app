@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/values/strings.xml -->
+<resources>
+    <string name="app_name">Control de Gastos</string>
+    <string name="notification_channel_name">Estado del servicio</string>
+</resources>

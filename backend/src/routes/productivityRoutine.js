@@ -1,0 +1,10 @@
+const router = require('express').Router()
+const auth   = require('../middleware/auth')
+const ctrl   = require('../controllers/productivityRoutineController')
+router.use(auth)
+router.get('/today', ctrl.getTodaySchedule)
+router.get('/', ctrl.list)
+router.post('/', ctrl.create)
+router.put('/:id', ctrl.update)
+router.delete('/:id', ctrl.remove)
+module.exports = router

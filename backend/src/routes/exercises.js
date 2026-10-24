@@ -1,0 +1,11 @@
+const router = require('express').Router()
+const auth = require('../middleware/auth')
+const ctrl = require('../controllers/exerciseController')
+router.use(auth)
+router.get('/', ctrl.list)
+router.get('/meta', ctrl.meta)
+router.post('/', ctrl.create)
+router.get('/:id/history', ctrl.getHistory)
+router.get('/:id', ctrl.get)
+router.delete('/:id', ctrl.remove)
+module.exports = router

@@ -1,0 +1,13 @@
+const router = require('express').Router()
+const auth   = require('../middleware/auth')
+const upload = require('../config/upload')
+const ctrl   = require('../controllers/mealController')
+router.use(auth)
+router.get('/today-summary', ctrl.getTodaySummary)
+router.post('/scan', upload.single('photo'), ctrl.scanPhoto)
+router.post('/estimate', ctrl.estimateFromText)
+router.get('/', ctrl.list)
+router.post('/', ctrl.create)
+router.put('/:id', ctrl.update)
+router.delete('/:id', ctrl.remove)
+module.exports = router

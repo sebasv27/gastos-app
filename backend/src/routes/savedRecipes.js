@@ -1,0 +1,10 @@
+const router = require('express').Router()
+const auth   = require('../middleware/auth')
+const ctrl   = require('../controllers/savedRecipeController')
+router.use(auth)
+router.get('/', ctrl.list)
+router.post('/', ctrl.save)
+router.put('/:id/favorite', ctrl.toggleFavorite)
+router.post('/:id/use', ctrl.logUse)
+router.delete('/:id', ctrl.remove)
+module.exports = router
