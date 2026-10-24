@@ -113,6 +113,7 @@ export const exerciseApi = {
     api.get('/exercises', { params: typeof params === 'string' ? { muscleGroup: params } : params }),
   get: (id: string) => api.get(`/exercises/${id}`),
   meta: () => api.get('/exercises/meta'),
+  records: () => api.get('/exercises/records'),
   create: (data: { name: string; muscleGroup: string; equipment?: string }) =>
     api.post('/exercises', data),
   getHistory: (id: string, limit?: number) => api.get(`/exercises/${id}/history`, { params: { limit } }),

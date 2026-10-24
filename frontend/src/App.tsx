@@ -26,6 +26,7 @@ import HabitsPage   from './pages/HabitsPage'
 import RoutinePage  from './pages/RoutinePage'
 import PomodoroPage from './pages/PomodoroPage'
 import Layout           from './components/layout/Layout'
+import RecordsPage from './pages/RecordsPage'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } }
@@ -64,6 +65,7 @@ export default function App() {
 
             {/* Fitness */}
             <Route path="fitness/perfil"   element={<FitnessProfilePage />} />
+            <Route path="fitness/records" element={<RecordsPage />} />
             <Route path="fitness/progreso" element={<ProgressPage />} />
             <Route path="fitness/rutinas"  element={<RoutinesPage />} />
             <Route path="fitness/comidas"       element={<MealsPage />} />

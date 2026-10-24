@@ -115,7 +115,7 @@ export default function WorkoutSessionPage() {
 
     const setNumber = (setsByExercise[exerciseId]?.length || 0) + 1
     try {
-      await workoutSessionApi.addSet(id!, {
+      const res = await workoutSessionApi.addSet(id!, {
         exerciseId,
         setNumber,
         weightKg: parseFloat(form.weight),
@@ -125,6 +125,15 @@ export default function WorkoutSessionPage() {
       formRefs.current[exerciseId] = { weight: form.weight, reps: form.reps, rpe: null } // mantiene peso para siguiente serie
       refetch()
       qc.invalidateQueries({ queryKey: ['volume-trend'] })
+
+      const prs = res?.data?.data?.prs as { types: string[]; e1rm: number | null } | undefined
+      if (prs?.types?.length) {
+        const w = parseFloat(form.weight), r = parseInt(form.reps)
+        const partes = prs.types.map(t =>
+          t === 'weight' ? `peso máximo ${w} kg` : t === 'e1rm' ? `1RM estimado ${prs.e1rm} kg` : `${r} reps con ${w} kg`)
+        toast.success(`¡Nuevo récord! ${partes.join(' · ')}`, { icon: '🏆', duration: 5000 })
+        qc.invalidateQueries({ queryKey: ['exercise-records'] })
+      }
 
       // Buscar descanso objetivo de la rutina si existe
       const routineRest = session.routine
