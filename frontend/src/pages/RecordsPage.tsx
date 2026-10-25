@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Trophy, ChevronDown, ChevronUp, Search } from 'lucide-react'
 import { exerciseApi } from '../services/api'
 import ExerciseThumb from '../components/exercises/ExerciseThumb'
+import OneRepMaxCalculator from '../components/exercises/OneRepMaxCalculator'
 
 interface Rec {
   exerciseId: string
@@ -76,6 +77,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 export default function RecordsPage() {
   const [q, setQ] = useState('')
   const [abierto, setAbierto] = useState<string | null>(null)
+  const [calc, setCalc] = useState<{ w: number; r: number; name?: string } | null>(null)
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['exercise-records'],
@@ -94,6 +96,8 @@ export default function RecordsPage() {
         </h1>
         <p className="text-sm text-slate-500">Tu mejor marca en cada ejercicio · 1RM estimado con la fórmula de Epley</p>
       </div>
+
+      <OneRepMaxCalculator preset={calc} />
 
       {isLoading ? (
         <div className="space-y-3">
@@ -176,6 +180,14 @@ export default function RecordsPage() {
                         )}
                       </div>
                       <Historial exerciseId={r.exerciseId} />
+                      {r.bestE1rm && (
+                        <button
+                          onClick={() => setCalc({ w: r.bestE1rm!.weightKg, r: r.bestE1rm!.reps, name: r.name })}
+                          className="text-xs font-medium text-brand-600 hover:underline"
+                        >
+                          Calcular cargas con este récord →
+                        </button>
+                      )}
                     </div>
                   )}
                 </li>
