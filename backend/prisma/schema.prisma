@@ -73,6 +73,7 @@ model Transaction {
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id])
+  meal     Meal?
 
   @@map("transactions")
 }
@@ -274,10 +275,13 @@ model Meal {
   fatG      Float
   source    MealSource @default(MANUAL)
   photoUrl  String?
+  price         Float?
+  transactionId String?    @unique
   date      DateTime   @default(now())
   createdAt DateTime   @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
 
   @@map("meals")
 }

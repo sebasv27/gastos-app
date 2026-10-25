@@ -1,4 +1,5 @@
 const sharp         = require('sharp')
+const { syncMealExpense } = require('../services/mealExpenseService')
 const prisma         = require('../config/prisma')
 const foodOcrService = require('../services/foodOcrService')
 const logger         = require('../config/logger')
@@ -17,7 +18,9 @@ exports.create = async (req,res) => {
   try {
     const { name, mealType, calories, proteinG, carbsG, fatG, date, source } = req.body
     if (!name || calories===undefined) return res.status(400).json({ error:'Nombre y calorías requeridos' })
-    res.status(201).json({ data: await prisma.meal.create({ data:{ name, mealType:mealType||'OTHER', calories:parseFloat(calories), proteinG:parseFloat(proteinG)||0, carbsG:parseFloat(carbsG)||0, fatG:parseFloat(fatG)||0, source:source||'MANUAL', date:date?new Date(date):new Date(), userId:req.user.id } }) })
+    const meal = await prisma.meal.create({ data:{ name, mealType:mealType||'OTHER', calories:parseFloat(calories), proteinG:parseFloat(proteinG)||0, carbsG:parseFloat(carbsG)||0, fatG:parseFloat(fatG)||0, source:source||'MANUAL', date:date?new Date(date):new Date(), userId:req.user.id } })
+    const final = parseFloat(req.body.price) > 0 ? await syncMealExpense({ meal, price: req.body.price, userId: req.user.id }) : meal
+    res.status(201).json({ data: final })
   } catch { res.status(500).json({ error:'Error' }) }
 }
 
@@ -25,12 +28,16 @@ exports.update = async (req,res) => {
   try {
     const { name, mealType, calories, proteinG, carbsG, fatG } = req.body
     const r = await prisma.meal.updateMany({ where:{ id:req.params.id, userId:req.user.id }, data:{ ...(name&&{name}), ...(mealType&&{mealType}), ...(calories!==undefined&&{ calories:parseFloat(calories) }), ...(proteinG!==undefined&&{ proteinG:parseFloat(proteinG) }), ...(carbsG!==undefined&&{ carbsG:parseFloat(carbsG) }), ...(fatG!==undefined&&{ fatG:parseFloat(fatG) }) } })
+    if (r.count && (req.body.price !== undefined || req.body.name || req.body.mealType)) {
+      const meal = await prisma.meal.findFirst({ where:{ id:req.params.id, userId:req.user.id } })
+      if (meal) await syncMealExpense({ meal, price: req.body.price !== undefined ? req.body.price : meal.price, userId: req.user.id })
+    }
     if(r.count===0) return res.status(404).json({ error:'No encontrada' })
     res.json({ message:'Actualizado' })
   } catch { res.status(500).json({ error:'Error' }) }
 }
 
-exports.remove = async (req,res) => { try { await prisma.meal.deleteMany({ where:{ id:req.params.id, userId:req.user.id } }); res.json({ message:'Eliminado' }) } catch { res.status(500).json({ error:'Error' }) } }
+exports.remove = async (req,res) => { try { const m = await prisma.meal.findFirst({ where:{ id:req.params.id, userId:req.user.id }, select:{ transactionId:true } }); await prisma.meal.deleteMany({ where:{ id:req.params.id, userId:req.user.id } }); if (m?.transactionId) await prisma.transaction.deleteMany({ where:{ id:m.transactionId, userId:req.user.id } }); res.json({ message:'Eliminado' }) } catch { res.status(500).json({ error:'Error' }) } }
 
 exports.scanPhoto = async (req,res) => {
   try {
