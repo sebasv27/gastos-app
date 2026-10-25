@@ -1,5 +1,5 @@
 const sharp         = require('sharp')
-const { syncMealExpense } = require('../services/mealExpenseService')
+const { syncMealExpense, removeMealExpense } = require('../services/mealExpenseService')
 const prisma         = require('../config/prisma')
 const foodOcrService = require('../services/foodOcrService')
 const logger         = require('../config/logger')
@@ -37,7 +37,7 @@ exports.update = async (req,res) => {
   } catch { res.status(500).json({ error:'Error' }) }
 }
 
-exports.remove = async (req,res) => { try { const m = await prisma.meal.findFirst({ where:{ id:req.params.id, userId:req.user.id }, select:{ transactionId:true } }); await prisma.meal.deleteMany({ where:{ id:req.params.id, userId:req.user.id } }); if (m?.transactionId) await prisma.transaction.deleteMany({ where:{ id:m.transactionId, userId:req.user.id } }); res.json({ message:'Eliminado' }) } catch { res.status(500).json({ error:'Error' }) } }
+exports.remove = async (req,res) => { try { const m = await prisma.meal.findFirst({ where:{ id:req.params.id, userId:req.user.id }, select:{ transactionId:true } }); await prisma.meal.deleteMany({ where:{ id:req.params.id, userId:req.user.id } }); if (m?.transactionId) await removeMealExpense(m.transactionId, req.user.id); res.json({ message:'Eliminado' }) } catch { res.status(500).json({ error:'Error' }) } }
 
 exports.scanPhoto = async (req,res) => {
   try {
