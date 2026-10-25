@@ -3,8 +3,7 @@ import { useState, useRef, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Camera, Plus, Trash2, Flame, Beef, Wheat, Droplet,
-  Upload, Loader2, CheckCircle, X, Keyboard
-} from 'lucide-react'
+  Upload, Loader2, CheckCircle, X, Keyboard, Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { mealApi } from '../services/api'
 import { TodayMealsSummary, MealType, Meal } from '../types'
@@ -121,7 +120,7 @@ export default function MealsPage() {
                 {meal.source === 'PHOTO_OCR' ? <Camera size={14} className="text-brand-600" /> : <Flame size={14} className="text-brand-600" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-dark truncate">{meal.name}</p>
+                <p className="text-sm font-medium text-dark truncate">{meal.name}{(meal as any).price ? <span className="ml-1.5 text-[11px] font-normal text-red-500">· $ {Math.round((meal as any).price).toLocaleString('es-CO')}</span> : null}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-slate-400">{MEAL_TYPE_LABELS[meal.mealType]}</span>
                   <span className="text-slate-200">·</span>
@@ -170,7 +169,7 @@ function AddMealModal({ initialMode, onModeChange, onClose, onSuccess }: ModalPr
 
   const [form, setForm] = useState({
     name: '', mealType: 'OTHER' as MealType,
-    calories: '', proteinG: '', carbsG: '', fatG: ''
+    calories: '', proteinG: '', carbsG: '', fatG: '', price: ''
   })
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -214,7 +213,8 @@ function AddMealModal({ initialMode, onModeChange, onClose, onSuccess }: ModalPr
         proteinG: parseFloat(form.proteinG) || 0,
         carbsG:   parseFloat(form.carbsG) || 0,
         fatG:     parseFloat(form.fatG) || 0,
-        source: previewUrl ? 'PHOTO_OCR' : 'MANUAL'
+        source: previewUrl ? 'PHOTO_OCR' : 'MANUAL',
+        price: form.price ? Number(form.price.replace(/\D/g, '')) : undefined
       })
       toast.success('Comida registrada')
       onSuccess()
@@ -336,6 +336,17 @@ function AddMealModal({ initialMode, onModeChange, onClose, onSuccess }: ModalPr
                   <input type="number" value={form.fatG} onChange={e => set('fatG', e.target.value)}
                     placeholder="0g" className="w-full text-sm bg-transparent focus:outline-none" />
                 </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-slate-200 p-3">
+                <label className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Wallet size={10} />Precio (opcional)</label>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-slate-400">$</span>
+                  <input inputMode="numeric" value={form.price}
+                    onChange={e => { const d = e.target.value.replace(/\D/g, ''); set('price', d ? Number(d).toLocaleString('es-CO') : '') }}
+                    placeholder="0" className="w-full text-sm bg-transparent focus:outline-none" />
+                </div>
+                {form.price && <p className="text-[11px] text-slate-400 mt-1">Se registrará como gasto en Alimentación</p>}
               </div>
             </div>
           )}
