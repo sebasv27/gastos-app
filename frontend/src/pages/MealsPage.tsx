@@ -184,14 +184,14 @@ function AddMealModal({ initialMode, onModeChange, onClose, onSuccess }: ModalPr
     try {
       const res = await mealApi.scanPhoto(file)
       const d = res.data.data
-      setForm({
+      setForm(f => ({ ...f,
         name: d.name || '',
         mealType: d.mealType || 'OTHER',
         calories: String(d.calories || ''),
         proteinG: String(d.proteinG || ''),
         carbsG:   String(d.carbsG || ''),
         fatG:     String(d.fatG || ''),
-      })
+      }))
       setOcrConfidence(d.confidence)
       toast.success('Foto analizada')
       switchMode('manual')
