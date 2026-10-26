@@ -50,7 +50,7 @@ export default function ImportPage() {
       const fd = new FormData()
       fd.append('file', archivo)
       if (password) fd.append('password', password)
-      const r = await api.post('/imports/preview', fd, { timeout: 180000 })
+      const r = await api.post('/imports/preview', fd, { timeout: 180000, headers: { 'Content-Type': 'multipart/form-data' } })
       const p = r.data.data as Preview
       setPrev(p)
       setFilas(p.rows)
