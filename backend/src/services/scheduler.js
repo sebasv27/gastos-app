@@ -3,6 +3,12 @@ const prisma = require('../config/prisma')
 const emailService = require('./emailService')
 const logger = require('../config/logger')
 exports.scheduleJobs = () => {
+  // Domingos 7 p. m. hora Colombia (00:00 UTC del lunes): resumen financiero por Telegram
+  cron.schedule('0 0 * * 1', async () => {
+    try { await require('./debtService').sendWeeklySummaries() }
+    catch (err) { logger.error('Resumen semanal Telegram: ' + err.message) }
+  })
+
   cron.schedule('0 8 * * 1', async () => {
     logger.info('Ejecutando resumen semanal...')
     try {

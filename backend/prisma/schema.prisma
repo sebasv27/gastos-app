@@ -37,6 +37,9 @@ model User {
   pomodoroSessions  PomodoroSession[]
   telegramChatId    String? // agregado
 
+  debts           Debt[]
+  debtPayments    DebtPayment[]
+  financialAdvice FinancialAdvice[]
   @@map("users")
 }
 
@@ -75,6 +78,7 @@ model Transaction {
   category Category? @relation(fields: [categoryId], references: [id])
   meal     Meal?
 
+  debtPayment DebtPayment?
   @@map("transactions")
 }
 
@@ -481,4 +485,78 @@ enum HabitFrequency {
 enum PomodoroStatus {
   COMPLETED
   ABANDONED
+}
+
+// ---------- Deudas y préstamos ----------
+enum DebtDirection {
+  I_OWE
+  OWED_TO_ME
+}
+
+enum DebtType {
+  CREDIT_CARD
+  LOAN
+  PERSONAL
+  MORTGAGE
+  VEHICLE
+  OTHER
+}
+
+enum RateType {
+  EA
+  MONTHLY
+}
+
+model Debt {
+  id           String        @id @default(cuid())
+  userId       String
+  direction    DebtDirection @default(I_OWE)
+  type         DebtType      @default(OTHER)
+  name         String
+  counterparty String?
+  principal    Float
+  balance      Float
+  interestRate Float         @default(0)
+  rateType     RateType      @default(EA)
+  minPayment   Float?
+  dueDay       Int?
+  startDate    DateTime      @default(now())
+  notes        String?
+  isPaid       Boolean       @default(false)
+  paidAt       DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments DebtPayment[]
+
+  @@map("debts")
+}
+
+model DebtPayment {
+  id            String   @id @default(cuid())
+  debtId        String
+  userId        String
+  amount        Float
+  date          DateTime @default(now())
+  notes         String?
+  transactionId String?  @unique
+  createdAt     DateTime @default(now())
+
+  debt        Debt         @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@map("debt_payments")
+}
+
+model FinancialAdvice {
+  id        String   @id @default(cuid())
+  userId    String
+  content   Json
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("financial_advice")
 }

@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ArrowLeftRight, Wallet,
   Target, Bell, BarChart2, LogOut, Menu, Smartphone, Rocket,
-  Dumbbell, ChevronDown, UserCircle, TrendingUp, ClipboardList, UtensilsCrossed, Sparkles, BookMarked, CheckSquare, Flame, Clock, Timer, Trophy } from 'lucide-react'
+  Dumbbell, ChevronDown, UserCircle, TrendingUp, ClipboardList, UtensilsCrossed, Sparkles, BookMarked, CheckSquare, Flame, Clock, Timer, Trophy, Landmark } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useQuery } from '@tanstack/react-query'
@@ -15,6 +15,7 @@ const MAIN_NAV = [
   { to: '/gastos',        icon: ArrowLeftRight,  label: 'Gastos' },
   { to: '/presupuestos',  icon: Wallet,           label: 'Presupuestos' },
   { to: '/metas',         icon: Target,           label: 'Metas' },
+  { to: '/deudas',        icon: Landmark,         label: 'Deudas' },
   { to: '/estadisticas',  icon: BarChart2,        label: 'Estadísticas' },
   { to: '/alertas',       icon: Bell,             label: 'Alertas', badge: true },
 ]
