@@ -8,7 +8,7 @@ import api from '../services/api'
 type Tipo = 'INCOME' | 'EXPENSE' | 'TRANSFER'
 interface Fila {
   id: number; date: string; description: string; amount: number; type: Tipo
-  categoryId: string | null; duplicate: string | null; selected: boolean
+  categoryId: string | null; duplicate: string | null; selected: boolean; note?: string | null
 }
 interface Preview {
   bank: string; period: { from: string; to: string } | null; method: 'exacto' | 'ia' | 'tabla'
@@ -181,6 +181,7 @@ export default function ImportPage() {
             <div className="flex-1 min-w-[160px]">
               <p className="text-sm text-slate-800 truncate">{f.description}</p>
               {f.duplicate && <p className="text-[11px] text-amber-700">Posible duplicado de: {f.duplicate}</p>}
+              {f.note && <p className="text-[11px] text-slate-400">{f.note}</p>}
             </div>
             <select value={f.type} onChange={e => cambiar(f.id, { type: e.target.value as Tipo, categoryId: e.target.value === 'TRANSFER' ? null : f.categoryId })}
               className="text-xs px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700">

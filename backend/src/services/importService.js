@@ -221,6 +221,8 @@ function parseTabla(filas) {
 
 // ---------- Categorías: historial del usuario + reglas de comercios colombianos ----------
 const REGLAS = [
+  [/AVANCE/, null, 'TRANSFER'],
+  [/INTERESES CORRIENTES|INTERES(ES)? DE MORA|CUOTA DE MANEJO|COMISION|\bGMF\b|4X1000|SEGURO DEUDOR/, ['Deudas', 'Otros']],
   [/PAGO DE NOMI|NOMINA|SALARIO/, null, 'INCOME'],
   [/INTERESES? AHORROS|ABONO INTERESES/, null, 'INCOME'],
   [/TRANSFERENCIAS? A NEQUI|PAGO AUTOM TC|PAGO TC|PAGO TARJETA|TRANSFERENCIA TC|ABONO A TC|PAGO A TU TARJETA/, null, 'TRANSFER'],
@@ -315,8 +317,18 @@ async function preview(userId, file, password) {
       categoryId: type === 'TRANSFER' ? null : sug.categoryId,
       duplicate: idx >= 0 ? existentes[idx].description : null,
       selected: idx < 0 && type !== 'TRANSFER',
+      note: null,
     }
   })
+
+  if (res.method === 'ia' && rows.length) {
+    const max = rows.reduce((m, r) => (r.date > m ? r.date : m), rows[0].date)
+    const lim = new Date(`${max}T00:00:00Z`); lim.setUTCDate(lim.getUTCDate() - 40)
+    const limite = lim.toISOString().slice(0, 10)
+    for (const r of rows) {
+      if (r.date < limite) { r.selected = false; r.note = 'Fecha anterior al periodo del extracto: puede ser una compra diferida a cuotas que ya registraste' }
+    }
+  }
 
   const sum = t => Math.round(res.rows.filter(r => r.type === t).reduce((s, r) => s + r.amount, 0) * 100) / 100
   const check = res.totals ? {
