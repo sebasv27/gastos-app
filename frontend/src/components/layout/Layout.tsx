@@ -99,7 +99,7 @@ export default function Layout() {
         {/* Productividad collapsible section */}
           <div>
             <button onClick={() => setProdOpen(o => !o)}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors">
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-white/60 hover:bg-white/10 hover:text-white transition-all">
               <LayoutDashboard size={17} />
               <span className="flex-1 text-left font-medium">Productividad</span>
               <ChevronDown size={14} className={`transition-transform ${prodOpen ? 'rotate-180' : ''}`} />
