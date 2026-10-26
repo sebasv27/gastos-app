@@ -16,6 +16,8 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { name, description, exercises, isActive } = req.body
+    const own = await prisma.routine.findFirst({ where: { id: req.params.id, userId: req.user.id }, select: { id: true } })
+    if (!own) return res.status(404).json({ error: 'No encontrada' })
     if (exercises) await prisma.routineExercise.deleteMany({ where: { routineId: req.params.id } })
     const r = await prisma.routine.update({ where: { id: req.params.id }, data: { ...(name!==undefined&&{name}), ...(description!==undefined&&{description}), ...(isActive!==undefined&&{isActive}), ...(exercises&&{ routineExercises:{ create:exercises.map((e,i)=>({ exerciseId:e.exerciseId, order:i, targetSets:e.targetSets||3, targetReps:e.targetReps||'8-12', restSeconds:e.restSeconds||90, isSuperset:e.isSuperset||false, supersetGroup:e.supersetGroup||null, notes:e.notes })) } }) }, include: inc })
     res.json({ data: r })

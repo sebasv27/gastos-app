@@ -18,6 +18,8 @@ exports.addSet = async (req, res) => {
   try {
     const { exerciseId, setNumber, weightKg, reps, rpe, restSeconds, isSuperset, isWarmup, isFailure, notes } = req.body
     if (!exerciseId || weightKg===undefined || reps===undefined) return res.status(400).json({ error:'Faltan datos' })
+    const ses = await prisma.workoutSession.findFirst({ where:{ id:req.params.id, userId:req.user.id }, select:{ id:true } })
+    if (!ses) return res.status(404).json({ error:'Sesión no encontrada' })
     const set = await prisma.setLog.create({ data:{ sessionId:req.params.id, exerciseId, setNumber:setNumber||1, weightKg:parseFloat(weightKg), reps:parseInt(reps), rpe:rpe!==undefined?parseFloat(rpe):null, restSeconds:restSeconds?parseInt(restSeconds):null, isSuperset:isSuperset||false, isWarmup:isWarmup||false, isFailure:isFailure||false, notes }, include:{ exercise:{ select:{ name:true, muscleGroup:true } } } })
     const prs = set.isWarmup ? { types: [] } : await detectPRs({ userId: req.user.id, exerciseId, setId: set.id, weightKg: set.weightKg, reps: set.reps })
     if (prs.types?.length) require('../services/pushService').notify(req.user.id, 'gym', { title: '🏆 ¡Nuevo récord!', body: `${set.exercise?.name || 'Ejercicio'}: ${set.weightKg} kg × ${set.reps}${prs.e1rm ? ` (1RM est. ${prs.e1rm} kg)` : ''}`, url: '/fitness/records', tag: 'pr' })
@@ -25,11 +27,13 @@ exports.addSet = async (req, res) => {
   } catch (err) { res.status(500).json({ error:err.message }) }
 }
 
-exports.updateSet = async (req,res) => { try { const { weightKg,reps,rpe,isFailure,notes } = req.body; const s=await prisma.setLog.update({ where:{ id:req.params.setId }, data:{ ...(weightKg!==undefined&&{ weightKg:parseFloat(weightKg) }), ...(reps!==undefined&&{ reps:parseInt(reps) }), ...(rpe!==undefined&&{ rpe:parseFloat(rpe) }), ...(isFailure!==undefined&&{ isFailure }), ...(notes!==undefined&&{ notes }) } }); res.json({ data:s }) } catch { res.status(500).json({ error:'Error' }) } }
+exports.updateSet = async (req,res) => { try { const { weightKg,reps,rpe,isFailure,notes } = req.body; const own=await prisma.setLog.findFirst({ where:{ id:req.params.setId, session:{ userId:req.user.id } }, select:{ id:true } }); if (!own) return res.status(404).json({ error:'No encontrada' }); const s=await prisma.setLog.update({ where:{ id:req.params.setId }, data:{ ...(weightKg!==undefined&&{ weightKg:parseFloat(weightKg) }), ...(reps!==undefined&&{ reps:parseInt(reps) }), ...(rpe!==undefined&&{ rpe:parseFloat(rpe) }), ...(isFailure!==undefined&&{ isFailure }), ...(notes!==undefined&&{ notes }) } }); res.json({ data:s }) } catch { res.status(500).json({ error:'Error' }) } }
 exports.removeSet = async (req,res) => { try { await prisma.setLog.deleteMany({ where:{ id:req.params.setId, session:{ userId:req.user.id } } }); res.json({ message:'Eliminada' }) } catch { res.status(500).json({ error:'Error' }) } }
 
 exports.finish = async (req, res) => {
   try {
+    const own = await prisma.workoutSession.findFirst({ where:{ id:req.params.id, userId:req.user.id }, select:{ id:true } }) // finish
+    if (!own) return res.status(404).json({ error:'No encontrada' })
     const session = await prisma.workoutSession.update({ where:{ id:req.params.id }, data:{ finishedAt:new Date(), ...(req.body.notes&&{ notes:req.body.notes }) }, include:inc })
     const working = session.setLogs.filter(s=>!s.isWarmup)
     const summary = { totalVolume:working.reduce((s,x)=>s+x.weightKg*x.reps,0), totalSets:working.length, durationMin:session.finishedAt?Math.round((session.finishedAt-session.startedAt)/60000):null }
