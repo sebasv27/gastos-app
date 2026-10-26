@@ -16,7 +16,7 @@ const TIPOS: { key: Clave; title: string; desc: string }[] = [
 ]
 
 const errorMsg = (e: unknown, fallback: string) =>
-  (e as { response?: { data?: { error?: string } } })?.response?.data?.error || fallback
+  (e as { response?: { data?: { error?: string } } })?.response?.data?.error || (e as Error)?.message || fallback
 
 function urlBase64ToUint8Array(base64: string) {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
@@ -77,6 +77,7 @@ export default function NotificationsPage() {
       qc.invalidateQueries({ queryKey: ['push-prefs'] })
       toast.success('Notificaciones activadas en este dispositivo')
     } catch (e) {
+      console.error('Push:', e)
       toast.error(errorMsg(e, 'No se pudieron activar las notificaciones'))
     } finally {
       setCargando(false)
