@@ -13,7 +13,7 @@ deploy_backend() {
     "$ROOT/backend/" "$SERVER:/home/sebs/gastos-app/backend/"
   local DB=""
   [ "${1:-}" = "--db" ] && DB="~/backup-db.sh && npx prisma db push --accept-data-loss && npx prisma generate &&"
-  ssh "$SERVER" "cd ~/gastos-app/backend && $DB pm2 restart gastos-backend >/dev/null && sleep 3 && pm2 logs gastos-backend --err --lines 5 --nostream"
+  ssh "$SERVER" "cd ~/gastos-app/backend && npm install --no-audit --no-fund --loglevel=error && $DB pm2 restart gastos-backend --update-env >/dev/null && sleep 3 && pm2 logs gastos-backend --err --lines 5 --nostream"
   echo "✅ Backend desplegado"
 }
 

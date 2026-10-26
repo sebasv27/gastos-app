@@ -20,6 +20,7 @@ exports.addSet = async (req, res) => {
     if (!exerciseId || weightKg===undefined || reps===undefined) return res.status(400).json({ error:'Faltan datos' })
     const set = await prisma.setLog.create({ data:{ sessionId:req.params.id, exerciseId, setNumber:setNumber||1, weightKg:parseFloat(weightKg), reps:parseInt(reps), rpe:rpe!==undefined?parseFloat(rpe):null, restSeconds:restSeconds?parseInt(restSeconds):null, isSuperset:isSuperset||false, isWarmup:isWarmup||false, isFailure:isFailure||false, notes }, include:{ exercise:{ select:{ name:true, muscleGroup:true } } } })
     const prs = set.isWarmup ? { types: [] } : await detectPRs({ userId: req.user.id, exerciseId, setId: set.id, weightKg: set.weightKg, reps: set.reps })
+    if (prs.types?.length) require('../services/pushService').notify(req.user.id, 'gym', { title: '🏆 ¡Nuevo récord!', body: `${set.exercise?.name || 'Ejercicio'}: ${set.weightKg} kg × ${set.reps}${prs.e1rm ? ` (1RM est. ${prs.e1rm} kg)` : ''}`, url: '/fitness/records', tag: 'pr' })
     res.status(201).json({ data: { ...set, prs } })
   } catch (err) { res.status(500).json({ error:err.message }) }
 }

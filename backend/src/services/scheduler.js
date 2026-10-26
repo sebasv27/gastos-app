@@ -3,6 +3,17 @@ const prisma = require('../config/prisma')
 const emailService = require('./emailService')
 const logger = require('../config/logger')
 exports.scheduleJobs = () => {
+  // 8 a. m. Colombia (13:00 UTC): avisar pagos de deudas de mañana
+  cron.schedule('0 13 * * *', async () => {
+    try { await require('./pushService').checkDebtReminders() }
+    catch (err) { logger.error('Push deudas: ' + err.message) }
+  })
+  // Domingos 7:05 p. m. Colombia: resumen semanal por push
+  cron.schedule('5 0 * * 1', async () => {
+    try { await require('./pushService').sendWeeklyPush() }
+    catch (err) { logger.error('Push semanal: ' + err.message) }
+  })
+
   // Domingos 7 p. m. hora Colombia (00:00 UTC del lunes): resumen financiero por Telegram
   cron.schedule('0 0 * * 1', async () => {
     try { await require('./debtService').sendWeeklySummaries() }

@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ArrowLeftRight, Wallet,
   Target, Bell, BarChart2, LogOut, Menu, Smartphone, Rocket,
-  Dumbbell, ChevronDown, UserCircle, TrendingUp, ClipboardList, UtensilsCrossed, Sparkles, BookMarked, CheckSquare, Flame, Clock, Timer, Trophy, Landmark } from 'lucide-react'
+  Dumbbell, ChevronDown, UserCircle, TrendingUp, ClipboardList, UtensilsCrossed, Sparkles, BookMarked, CheckSquare, Flame, Clock, Timer, Trophy, Landmark, BellRing } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useQuery } from '@tanstack/react-query'
@@ -38,6 +38,7 @@ const FITNESS_NAV = [
 ]
 
 const SYSTEM_NAV = [
+  { to: '/notificaciones',   icon: BellRing,       label: 'Notificaciones' },
   { to: '/dispositivo',   icon: Smartphone,       label: 'Dispositivo' },
   { to: '/deploy',        icon: Rocket,           label: 'Deploy' },
 ]

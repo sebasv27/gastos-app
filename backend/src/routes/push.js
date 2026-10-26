@@ -1,0 +1,11 @@
+const router = require('express').Router()
+const auth = require('../middleware/auth')
+const ctrl = require('../controllers/pushController')
+router.use(auth)
+router.get('/public-key', ctrl.publicKey)
+router.post('/subscribe', ctrl.subscribe)
+router.post('/unsubscribe', ctrl.unsubscribe)
+router.get('/prefs', ctrl.getPrefs)
+router.put('/prefs', ctrl.updatePrefs)
+router.post('/test', ctrl.test)
+module.exports = router

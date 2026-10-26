@@ -10,6 +10,7 @@ import DashboardPage    from './pages/DashboardPage'
 import TransactionsPage from './pages/TransactionsPage'
 import BudgetsPage      from './pages/BudgetsPage'
 import DebtsPage        from './pages/DebtsPage'
+import NotificationsPage from './pages/NotificationsPage'
 import GoalsPage        from './pages/GoalsPage'
 import AlertsPage       from './pages/AlertsPage'
 import StatsPage        from './pages/StatsPage'
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="gastos"        element={<TransactionsPage />} />
             <Route path="presupuestos"  element={<BudgetsPage />} />
             <Route path="metas"         element={<GoalsPage />} />
+            <Route path="notificaciones" element={<NotificationsPage />} />
             <Route path="deudas"        element={<DebtsPage />} />
             <Route path="estadisticas"  element={<StatsPage />} />
             <Route path="alertas"       element={<AlertsPage />} />

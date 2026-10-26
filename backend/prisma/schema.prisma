@@ -40,6 +40,8 @@ model User {
   debts           Debt[]
   debtPayments    DebtPayment[]
   financialAdvice FinancialAdvice[]
+  pushSubscriptions      PushSubscription[]
+  notificationPreference NotificationPreference?
   @@map("users")
 }
 
@@ -559,4 +561,33 @@ model FinancialAdvice {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("financial_advice")
+}
+
+// ---------- Notificaciones push ----------
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+model NotificationPreference {
+  userId String  @id
+  budget Boolean @default(true)
+  habits Boolean @default(true)
+  debts  Boolean @default(true)
+  gym    Boolean @default(true)
+  weekly Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }

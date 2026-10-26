@@ -24,7 +24,7 @@ const checkReminders = async () => {
     const dayOfWeek = now.getDay() || 7
 
     // Por ahora solo log — telegramChatId se activa cuando esté en BD
-    logger.info('Recordatorios: verificando...')
+    await require('./pushService').checkHabitReminders()
   } catch (err) { logger.error('reminderService: ' + err.message) }
 }
 
