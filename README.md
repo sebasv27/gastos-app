@@ -1,88 +1,163 @@
-# 💰 Control de Gastos — Proyecto Completo
+# Control de Gastos — Personal Finance, Fitness & Productivity
 
-App de finanzas personales + fitness con IA (Claude API).
+A full-stack personal life tracker in production at **[gastos.sebscode.dev](https://gastos.sebscode.dev)**: money, training, nutrition and habits in one place, with AI insights that work on top of deterministic calculations.
 
-## Stack
-- **Backend**: Node.js + Express + Prisma + PostgreSQL
-- **Frontend**: React + TypeScript + Tailwind + Vite
-- **IA**: Claude API (recibos OCR, fotos de comidas, recomendaciones de recetas)
-- **Android**: Kotlin (monitoreo de notificaciones bancarias)
+Built and operated end to end by [Juan Sebastián Villegas](https://linkedin.com/in/juansebastianv27): React frontend, Node.js API, PostgreSQL, a Telegram bot and an Android companion app, self-hosted on a Linux VPS.
 
-## Instalación desde cero
+> 🇪🇸 The app UI is in Spanish (built for Colombia, amounts in COP). This README is in English.
 
-### 1. Requisitos
-- Node.js 20+
-- Docker (para PostgreSQL)
-- Cuenta en [console.anthropic.com](https://console.anthropic.com) para la API key de Claude
+<!-- Replace with real screenshots: save them in docs/screenshots/ -->
+| Dashboard | Debts & AI plan | Exercise catalog |
+|---|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Debts](docs/screenshots/debts.png) | ![Exercises](docs/screenshots/exercises.png) |
 
-### 2. Clonar y configurar
+---
 
-```bash
-# Instalar backend
-cd backend
-cp .env.example .env
-# Editar .env con tus valores (especialmente ANTHROPIC_API_KEY y JWT_SECRET)
-npm install
+## Features
 
-# Levantar PostgreSQL
-cd ..
-docker compose up -d
+**Finance**
+- Income and expense tracking with categories, budgets and alerts at 80% / 100%
+- **Month-end spending forecast** per category, blending the current month's pace with a 3-month history (one-off expenses such as rent are not extrapolated daily)
+- **Debts & loans** (what I owe and what I'm owed): payments create linked expense/income transactions; avalanche vs. snowball payoff simulation with EA or monthly interest rates
+- **AI financial advice** (Groq LLM) that interprets the simulations and spending patterns, plus a weekly summary on Telegram
+- **Monthly PDF report** (finance, budgets, debts, habits, training, AI commentary), generated server-side and delivered by Telegram on the 1st of each month
+- Android companion app that reads push notifications from Colombian banks (Bancolombia, Nequi, Daviplata, BBVA, Davivienda) to log expenses automatically
 
-# Migrar base de datos y cargar datos iniciales
-cd backend
-npx prisma migrate dev --name init
-npm run db:seed
+**Fitness**
+- Routine builder and live workout sessions with sets, RPE and rest timers taken from the routine
+- Catalog of ~780 exercises with photos and step-by-step instructions, translated to Spanish with an LLM
+- **Personal records** detected in real time (max weight, estimated 1RM with Epley, reps at a given weight) and a 1RM percentage calculator
+- Meal logging with macros; a meal with a price automatically creates a linked expense
 
-# Arrancar backend
-npm run dev
-# → http://localhost:4000
+**Productivity**
+- Habits with streaks computed from daily logs, a 6-month heatmap and completion by weekday
+- Tasks, routines and pomodoro
+
+**Platform**
+- Installable PWA with **Web Push notifications** (budgets, habit reminders, upcoming debt payments, PRs, weekly summary) and per-type preferences
+- Dark mode (light / dark / system)
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Clients
+    W[React PWA<br/>Vite + TS + Tailwind]
+    A[Android app<br/>Kotlin]
+    T[Telegram]
+  end
+
+  subgraph VPS["Ubuntu VPS (Hetzner)"]
+    N[Nginx<br/>TLS, static files,<br/>exercise images]
+    API[Express API<br/>Node.js + Prisma]
+    BOT[Telegram bot]
+    CRON[node-cron jobs<br/>reminders, reports]
+    DB[(PostgreSQL)]
+  end
+
+  G[Groq LLM API]
+  WP[Web Push services<br/>FCM / Mozilla / Apple]
+
+  W -->|HTTPS| N --> API
+  A -->|bank notifications| API
+  T <--> BOT --> API
+  API --> DB
+  CRON --> API
+  API --> G
+  API -->|VAPID| WP --> W
+  API -->|reports, summaries| T
 ```
 
+---
+
+## Technical decisions
+
+**Deterministic math, AI only for interpretation.** Debt payoff simulations, spending forecasts, streaks and 1RM estimates are computed in code. The LLM receives the results and turns them into advice in plain language. Language models are unreliable at arithmetic; this keeps the numbers correct and the AI output easy to verify.
+
+**Privacy before sending data to an LLM.** Only amounts, rates and category totals are sent to Groq. Debts are anonymized ("Credit card 1", "Personal loan 2"), so the names of people or banks never leave the server.
+
+**Linked records instead of duplicated data.** A meal with a price or a debt payment creates a transaction linked by foreign key. Editing or deleting the source updates or removes the transaction, and budgets and alerts are recalculated.
+
+**Timezone-aware by design.** Colombia is UTC−5 with no DST. Daily grouping, month boundaries, habit days and reminder times are computed in `America/Bogota`, which fixed charts placing evening expenses on the next day.
+
+**Web Push without Firebase.** Notifications use the Web Push standard with self-generated VAPID keys (`web-push`). Expired subscriptions (404/410) are cleaned up automatically, and each notification type can be turned off.
+
+**Lightweight PDF generation.** Reports are drawn with `pdfkit` instead of a headless browser, which keeps memory usage low on a 4 GB VPS.
+
+**Open exercise data.** The exercise catalog comes from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain, Unlicense), imported idempotently and served from the VPS. Original duplicated exercises were merged into the catalog without losing workout history.
+
+---
+
+## Tech stack
+
+| Layer | Technologies |
+|---|---|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query, Recharts, lucide-react |
+| Backend | Node.js, Express, Prisma ORM, node-cron, web-push, pdfkit |
+| Database | PostgreSQL |
+| AI | Groq API (LLM) for advice, forecasts commentary, translations and food estimates |
+| Mobile | Android (Kotlin), NotificationListenerService |
+| Infra | Ubuntu VPS (Hetzner), Nginx, PM2, Let's Encrypt, daily `pg_dump` backups |
+| Integrations | Telegram Bot API, Web Push (VAPID) |
+
+---
+
+## Project structure
+
+```
+.
+├── backend/          # Express API
+│   ├── prisma/       # Schema
+│   ├── scripts/      # Data import, translation and maintenance scripts
+│   └── src/
+│       ├── controllers/
+│       ├── routes/
+│       └── services/ # Business logic: forecasts, debts, records, push, reports...
+├── frontend/         # React PWA
+│   ├── public/       # Service worker, manifest, icons
+│   └── src/
+├── android/          # Kotlin companion app
+└── deploy.sh         # Build, sync and restart on the VPS
+```
+
+---
+
+## Running locally
+
+Requirements: Node.js 20+, PostgreSQL 15+.
+
 ```bash
-# Instalar frontend (en otra terminal)
+# Backend
+cd backend
+cp .env.example .env        # fill in DATABASE_URL, JWT_SECRET, GROQ_API_KEY...
+npm install
+npx prisma db push
+npm run dev
+
+# Frontend (another terminal)
 cd frontend
 npm install
 npm run dev
-# → http://localhost:5173
 ```
 
-### 3. Variables de entorno obligatorias (.env)
+Optional variables: `TELEGRAM_TOKEN` (bot messages and reports), `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (push notifications; generate them with `node scripts/generateVapid.js`).
 
-| Variable | Descripción |
-|---|---|
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/gastos_app` |
-| `JWT_SECRET` | String aleatorio 32+ chars: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `ANTHROPIC_API_KEY` | Desde console.anthropic.com → API Keys |
-| `FRONTEND_URL` | `http://localhost:5173` en desarrollo |
+## Deployment
 
-### 4. Usuario demo
-- Email: `demo@gastos.com`
-- Contraseña: `demo123456`
+```bash
+./deploy.sh frontend         # type-check, build, rsync dist/ to Nginx
+./deploy.sh backend          # syntax check, rsync, npm install, PM2 restart
+./deploy.sh backend --db     # same + database backup and Prisma schema sync
+./deploy.sh all
+```
 
-## Funcionalidades
+The script resolves paths from its own location, so it always syncs the right folders regardless of the current directory. Secrets (`.env*`) are never synced.
 
-### 💰 Finanzas
-- Dashboard con gráficas de gastos por categoría y día
-- Gestión de transacciones con filtros y exportación CSV
-- Presupuestos mensuales con alertas al 80% y 100%
-- Metas de ahorro con progreso
-- Alertas por email (resumen semanal)
+---
 
-### 📸 Captura inteligente
-- **OCR de recibos**: foto → Claude extrae monto, comercio, fecha y categoría
-- **Auto-categorización**: escribe "Uber" → sugiere "Transporte" automáticamente
-- **Notificaciones bancarias**: app Android intercepta notificaciones de Bancolombia, Nequi, Daviplata
+## Author
 
-### 🏋️ Fitness
-- **Macros automáticas**: ingresa peso, altura y objetivo → Claude calcula TDEE y macros (Mifflin-St Jeor)
-- **Progreso**: gráficas de peso con promedio móvil + volumen de entreno semanal
-- **Rutinas**: plantillas reutilizables con superseries, RPE, timer de descanso
-- **Comidas**: registro manual o por foto (Claude estima calorías y macros)
-- **Recetas IA**: Claude genera recetas personalizadas según tus macros del día
-- **Mis Recetas**: guarda las que te gustan con ingredientes y pasos completos
-
-## Deploy a producción
-- Backend → Railway (incluye `railway.toml`)
-- Frontend → Vercel (incluye `vercel.json`)
-- CI/CD → GitHub Actions (`.github/workflows/deploy.yml`)
-
+**Juan Sebastián Villegas** · Medellín, Colombia
+[LinkedIn](https://linkedin.com/in/juansebastianv27) · [GitHub](https://github.com/sebasv27)
