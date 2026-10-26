@@ -48,6 +48,7 @@ function parseFecha(v) {
   return null
 }
 
+const addDiasHoy = n => { const d = new Date(Date.now() - OFFSET_MS); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
 const limpiarDesc = s => String(s || '').replace(/[•*]+/g, ' ').replace(/\s+/g, ' ').trim()
 
 function detectarBanco(texto) {
@@ -144,18 +145,23 @@ async function parseConIA(texto) {
   if (!lineas.length) throw httpError('No encontré movimientos en el archivo', 422)
   const hoy = dayKey(new Date())
   const rows = []
+  let periodo = null
   for (let i = 0; i < lineas.length && i < 360; i += 60) {
     if (i) await sleep(15000) // respetar el límite de tokens por minuto de Groq
     const prompt = `/no_think
 Extrae los movimientos de estas líneas de un extracto bancario colombiano. Hoy es ${hoy}.
-Responde SOLO con JSON válido: {"movimientos":[{"fecha":"AAAA-MM-DD","descripcion":"texto","monto":número positivo,"tipo":"gasto" | "ingreso" | "pago_tarjeta","moneda":"COP" | "USD"}]}
-Reglas: ignora saldos, totales, cupos, intereses informativos y líneas que no sean movimientos. En tarjetas de crédito, las compras son "gasto" y los pagos a la tarjeta son "pago_tarjeta". Montos sin separadores de miles. Si el extracto tiene una sección en dólares, marca esos movimientos con moneda "USD" y deja el monto en dólares (con decimales); el resto es "COP". Si falta el año, infiérelo sin usar fechas futuras.
+Responde SOLO con JSON válido: {"periodo":{"desde":"AAAA-MM-DD","hasta":"AAAA-MM-DD"},"movimientos":[{"fecha":"AAAA-MM-DD","descripcion":"texto","monto":número positivo,"tipo":"gasto" | "ingreso" | "pago_tarjeta","moneda":"COP" | "USD"}]}
+Reglas: ignora saldos, totales, cupos, intereses informativos y líneas que no sean movimientos. En tarjetas de crédito, las compras son "gasto" y los pagos a la tarjeta son "pago_tarjeta". Montos sin separadores de miles. Si el extracto tiene una sección en dólares, marca esos movimientos con moneda "USD" y deja el monto en dólares (con decimales); el resto es "COP". Si falta el año, infiérelo sin usar fechas futuras. Las fechas del extracto están en formato día/mes. En "periodo" pon el periodo facturado (la fecha de corte es "hasta"); si no aparece, usa null.
 Líneas:
 ${lineas.slice(i, i + 60).join('\n')}`
     let raw = await callClaude(prompt, null, 'image/jpeg', 3000)
     raw = parseJSON(String(raw).replace(/<think>[\s\S]*?<\/think>/g, ''))
     let json
     try { json = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)) } catch { continue }
+    if (!periodo && json.periodo?.desde && json.periodo?.hasta) {
+      const d = parseFecha(json.periodo.desde), h = parseFecha(json.periodo.hasta)
+      if (d && h && d < h && h <= addDiasHoy(1)) periodo = { from: d, to: h }
+    }
     for (const mv of json.movimientos || []) {
       const date = parseFecha(mv.fecha)
       const amount = Math.abs(Number(mv.monto))
@@ -183,6 +189,7 @@ ${lineas.slice(i, i + 60).join('\n')}`
       }
     }
   }
+  rows.periodo = periodo
   return rows
 }
 
@@ -354,11 +361,28 @@ async function preview(userId, file, password) {
   })
 
   if (res.method === 'ia' && rows.length) {
-    const max = rows.reduce((m, r) => (r.date > m ? r.date : m), rows[0].date)
-    const lim = new Date(`${max}T00:00:00Z`); lim.setUTCDate(lim.getUTCDate() - 40)
-    const limite = lim.toISOString().slice(0, 10)
+    const per = res.rows.periodo
+    const invertir = d => { const [y, m, dd] = d.split('-'); return Number(dd) <= 12 ? `${y}-${dd}-${m}` : null }
+    let desde, hasta
+    if (per) {
+      desde = per.from; hasta = per.to
+      res.period = res.period || per
+      // La IA a veces invierte día y mes (02/10 -> 10 de febrero): si al invertir cae dentro del periodo, se corrige
+      for (const r of rows) {
+        if (r.date >= desde && r.date <= hasta) continue
+        const inv = invertir(r.date)
+        if (inv && inv >= desde && inv <= hasta) r.date = inv
+      }
+    } else {
+      hasta = rows.reduce((m, r) => (r.date > m ? r.date : m), rows[0].date)
+      const lim = new Date(`${hasta}T00:00:00Z`); lim.setUTCDate(lim.getUTCDate() - 40)
+      desde = lim.toISOString().slice(0, 10)
+    }
     for (const r of rows) {
-      if (r.date < limite) { r.selected = false; r.note = 'Fecha anterior al periodo del extracto: puede ser una compra diferida a cuotas que ya registraste' }
+      if (r.date < desde || r.date > hasta) {
+        r.selected = false
+        r.note = `Fuera del periodo del extracto${per ? ` (${desde} a ${hasta})` : ''}: puede ser una compra diferida a cuotas o de otro mes`
+      }
     }
   }
 
