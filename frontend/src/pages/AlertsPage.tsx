@@ -86,7 +86,7 @@ export default function AlertsPage() {
                 onClick={() => !a.isRead && markRead(a.id)}
                 className={`flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer
                   ${a.isRead
-                    ? 'bg-white border-slate-100 opacity-60 hover:opacity-80'
+                    ? 'bg-white border-slate-100 opacity-80 hover:opacity-100'
                     : `${meta.bg} hover:shadow-sm`}`}
               >
                 <div className={`mt-0.5 shrink-0 ${meta.color}`}>{meta.icon}</div>
