@@ -120,6 +120,21 @@ function parseBancolombia(texto) {
   }
 }
 
+// TRM: primero la del extracto; si no aparece, la oficial (Banco de la República vía datos.gov.co)
+async function trmDe(texto) {
+  const m = texto.match(/(?:TRM|TASA\s+(?:DE\s+)?CAMBIO|TASA\s+REPRESENTATIVA)[^\d]{0,40}([\d.,]{4,})/i)
+  const v = m ? parseMonto(m[1]) : null
+  if (v && v > 2000 && v < 10000) return { valor: v, fuente: 'del extracto' }
+  try {
+    const ctrl = new AbortController()
+    setTimeout(() => ctrl.abort(), 5000)
+    const r = await fetch('https://www.datos.gov.co/resource/32sa-8pi3.json?$order=vigenciadesde%20DESC&$limit=1', { signal: ctrl.signal })
+    const t = parseFloat((await r.json())?.[0]?.valor)
+    if (t > 2000 && t < 10000) return { valor: t, fuente: 'oficial de hoy' }
+  } catch { /* sin conexión: se deja sin convertir */ }
+  return null
+}
+
 /** Lector con IA para formatos desconocidos. Solo envía líneas con fecha y monto, sin números de cuenta. */
 async function parseConIA(texto) {
   const lineas = texto.split('\n')
@@ -133,8 +148,8 @@ async function parseConIA(texto) {
     if (i) await sleep(15000) // respetar el límite de tokens por minuto de Groq
     const prompt = `/no_think
 Extrae los movimientos de estas líneas de un extracto bancario colombiano. Hoy es ${hoy}.
-Responde SOLO con JSON válido: {"movimientos":[{"fecha":"AAAA-MM-DD","descripcion":"texto","monto":número positivo,"tipo":"gasto" | "ingreso" | "pago_tarjeta"}]}
-Reglas: ignora saldos, totales, cupos, intereses informativos y líneas que no sean movimientos. En tarjetas de crédito, las compras son "gasto" y los pagos a la tarjeta son "pago_tarjeta". Montos en pesos sin separadores de miles. Si falta el año, infiérelo sin usar fechas futuras.
+Responde SOLO con JSON válido: {"movimientos":[{"fecha":"AAAA-MM-DD","descripcion":"texto","monto":número positivo,"tipo":"gasto" | "ingreso" | "pago_tarjeta","moneda":"COP" | "USD"}]}
+Reglas: ignora saldos, totales, cupos, intereses informativos y líneas que no sean movimientos. En tarjetas de crédito, las compras son "gasto" y los pagos a la tarjeta son "pago_tarjeta". Montos sin separadores de miles. Si el extracto tiene una sección en dólares, marca esos movimientos con moneda "USD" y deja el monto en dólares (con decimales); el resto es "COP". Si falta el año, infiérelo sin usar fechas futuras.
 Líneas:
 ${lineas.slice(i, i + 60).join('\n')}`
     let raw = await callClaude(prompt, null, 'image/jpeg', 3000)
@@ -148,10 +163,26 @@ ${lineas.slice(i, i + 60).join('\n')}`
       rows.push({
         date, description: limpiarDesc(mv.descripcion).slice(0, 120), amount,
         type: mv.tipo === 'ingreso' ? 'INCOME' : mv.tipo === 'pago_tarjeta' ? 'TRANSFER' : 'EXPENSE',
+        currency: String(mv.moneda || 'COP').toUpperCase() === 'USD' ? 'USD' : 'COP',
       })
     }
   }
   if (!rows.length) throw httpError('No pude leer movimientos de este extracto', 422)
+  if (rows.some(r => r.currency === 'USD')) {
+    const trm = await trmDe(texto)
+    for (const r of rows) {
+      if (r.currency !== 'USD') continue
+      if (trm) {
+        const usd = r.amount
+        r.amount = Math.round(usd * trm.valor)
+        r.description = `${r.description} (US$${usd})`
+        r.note = `Monto en dólares convertido con TRM $${Math.round(trm.valor).toLocaleString('es-CO')} (${trm.fuente})`
+      } else {
+        r.note = 'Monto en dólares sin convertir: revísalo antes de importar'
+        r.unconverted = true
+      }
+    }
+  }
   return rows
 }
 
@@ -226,6 +257,7 @@ const REGLAS = [
   [/PAGO DE NOMI|NOMINA|SALARIO/, null, 'INCOME'],
   [/INTERESES? AHORROS|ABONO INTERESES/, null, 'INCOME'],
   [/TRANSFERENCIAS? A NEQUI|PAGO AUTOM TC|PAGO TC|PAGO TARJETA|TRANSFERENCIA TC|ABONO A TC|PAGO A TU TARJETA/, null, 'TRANSFER'],
+  [/APPLE\.COM|ICLOUD|GOOGLE ?PLAY|GOOGLE \*|MICROSOFT|OPENAI|CHATGPT|ANTHROPIC|CLAUDE\.AI|ADOBE|CANVA/, ['Suscripciones', 'Entretenimiento', 'Tecnología']],
   [/MERCADOLIBRE|MERCADO LIBRE|AMAZON|TEMU|SHEIN|FALABELLA|ALKOSTO|KTRONIX/, ['Compras', 'Tecnología', 'Otros']],
   [/RAPPI|DIDI FOOD|IFOOD|FRISBY|KFC|MCDONALD|BURGER|PIZZA|CREPES|SUBWAY|ALIMENTOS|MERCADO|\bD1\b|\bARA\b|EXITO|CARULLA|OLIMPICA|JUMBO|OXXO|PANADERIA|RESTAURANTE|CAFE|JUAN VALDEZ/, ['Alimentación']],
   [/DIDI|UBER|CABIFY|INDRIVE|METRO|CIVICA|TERPEL|PRIMAX|TEXACO|GASOLINA|PEAJE|PARQUEADERO/, ['Transporte']],
@@ -316,8 +348,8 @@ async function preview(userId, file, password) {
       id: i, ...r, type,
       categoryId: type === 'TRANSFER' ? null : sug.categoryId,
       duplicate: idx >= 0 ? existentes[idx].description : null,
-      selected: idx < 0 && type !== 'TRANSFER',
-      note: null,
+      selected: idx < 0 && type !== 'TRANSFER' && !r.unconverted,
+      note: r.note || null,
     }
   })
 
