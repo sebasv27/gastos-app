@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Flame, Check, Trash2, X, Settings } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
+import HabitStats from '../components/habits/HabitStats'
 
 interface Habit {
   id: string; name: string; emoji: string; color: string
@@ -41,6 +42,7 @@ export default function HabitsPage() {
     try {
       const res = await habitApi.toggle(id)
       if (res.data.completed) toast.success(`✅ ${name} completado!${res.data.streak > 1 ? ` 🔥 Racha: ${res.data.streak}` : ''}`)
+      qc.invalidateQueries({ queryKey: ['habit-stats'] })
       refresh()
     } catch { toast.error('Error') }
   }
@@ -216,6 +218,8 @@ export default function HabitsPage() {
           ))}
         </div>
       )}
+
+      <HabitStats />
     </div>
   )
 }

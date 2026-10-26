@@ -58,3 +58,10 @@ exports.remove = async (req, res) => {
   try { await prisma.habit.deleteMany({ where: { id: req.params.id, userId: req.user.id } }); res.json({ message: 'Eliminado' }) }
   catch { res.status(500).json({ error: 'Error' }) }
 }
+
+exports.stats = async (req, res) => {
+  try {
+    const { userHabitStats } = require('../services/habitStatsService')
+    res.json({ data: await userHabitStats(req.user.id) })
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Error' }) }
+}
