@@ -45,7 +45,7 @@ export default function ReportsPage() {
   const telegram = async (y: number, m: number) => {
     setOcupado(`t-${y}-${m}`)
     try {
-      await api.post('/reports/monthly/telegram', null, { params: { year: y, month: m } })
+      await api.post('/reports/monthly/telegram', {}, { params: { year: y, month: m } })
       toast.success('Reporte enviado a Telegram')
     } catch (e) {
       toast.error(errorMsg(e, 'No se pudo enviar el reporte'))
