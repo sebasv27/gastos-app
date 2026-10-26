@@ -65,3 +65,55 @@ exports.stats = async (req, res) => {
     res.json({ data: await userHabitStats(req.user.id) })
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error' }) }
 }
+
+// ---- Rachas calculadas desde los registros diarios ----
+// El contador guardado sumaba 1 en cada toggle y nunca se reiniciaba al fallar un día.
+const _listOriginal = exports.list
+const _toggleOriginal = exports.toggle
+
+async function rachasReales(userId) {
+  const { userHabitStats } = require('../services/habitStatsService')
+  const st = await userHabitStats(userId)
+  return Object.fromEntries(st.habits.map(h => [h.id, h]))
+}
+
+function sincronizar(userId, habitos) {
+  return Promise.all(habitos.filter(Boolean).map(h =>
+    prisma.habit.updateMany({ where: { id: h.id, userId }, data: { streak: h.currentStreak, bestStreak: h.bestStreak } })))
+}
+
+exports.list = async (req, res) => {
+  const json = res.json.bind(res)
+  res.json = body => {
+    rachasReales(req.user.id).then(mapa => {
+      const lista = Array.isArray(body) ? body : body?.data
+      if (Array.isArray(lista)) {
+        for (const h of lista) {
+          const r = mapa[h.id]
+          if (r) { h.streak = r.currentStreak; h.bestStreak = r.bestStreak }
+        }
+      }
+      sincronizar(req.user.id, Object.values(mapa)).catch(() => {})
+      json(body)
+    }).catch(() => json(body))
+    return res
+  }
+  return _listOriginal(req, res)
+}
+
+exports.toggle = async (req, res) => {
+  const json = res.json.bind(res)
+  res.json = body => {
+    rachasReales(req.user.id).then(mapa => {
+      const r = mapa[req.params.id]
+      if (r && body && typeof body === 'object') {
+        if ('streak' in body) body.streak = r.currentStreak
+        if (body.data && typeof body.data === 'object' && 'streak' in body.data) body.data.streak = r.currentStreak
+        sincronizar(req.user.id, [r]).catch(() => {})
+      }
+      json(body)
+    }).catch(() => json(body))
+    return res
+  }
+  return _toggleOriginal(req, res)
+}
