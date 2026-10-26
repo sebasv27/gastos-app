@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ArrowLeftRight, Wallet,
   Target, Bell, BarChart2, LogOut, Menu, Smartphone, Rocket,
-  Dumbbell, ChevronDown, UserCircle, TrendingUp, ClipboardList, UtensilsCrossed, Sparkles, BookMarked, CheckSquare, Flame, Clock, Timer, Trophy, Landmark, BellRing, FileText } from 'lucide-react'
+  Dumbbell, ChevronDown, UserCircle, TrendingUp, ClipboardList, UtensilsCrossed, Sparkles, BookMarked, CheckSquare, Flame, Clock, Timer, Trophy, Landmark, BellRing, FileText, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useQuery } from '@tanstack/react-query'
@@ -14,6 +14,7 @@ import ThemeToggle from './ThemeToggle'
 const MAIN_NAV = [
   { to: '/',              icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/gastos',        icon: ArrowLeftRight,  label: 'Gastos' },
+  { to: '/importar',      icon: Upload,           label: 'Importar extracto' },
   { to: '/presupuestos',  icon: Wallet,           label: 'Presupuestos' },
   { to: '/metas',         icon: Target,           label: 'Metas' },
   { to: '/deudas',        icon: Landmark,         label: 'Deudas' },
