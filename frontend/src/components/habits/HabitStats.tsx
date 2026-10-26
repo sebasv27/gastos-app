@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Flame, Trophy, Target, CalendarCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { habitApi } from '../../services/api'
+import api from '../../services/api'
 
 interface HabitStat {
   id: string; name: string; emoji: string; color: string
@@ -76,7 +76,7 @@ function Heatmap({ h, today }: { h: HabitStat; today: string }) {
 export default function HabitStats() {
   const { data, isLoading } = useQuery({
     queryKey: ['habit-stats'],
-    queryFn: () => habitApi.stats().then(r => r.data.data as Stats),
+    queryFn: () => api.get('/habits/stats').then(r => r.data.data as Stats),
   })
 
   if (isLoading) return <div className="h-40 mt-8 bg-white border border-slate-200 rounded-2xl animate-pulse" />
