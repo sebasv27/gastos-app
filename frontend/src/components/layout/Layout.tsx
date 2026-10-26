@@ -3,12 +3,13 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ArrowLeftRight, Wallet,
   Target, Bell, BarChart2, LogOut, Menu, Smartphone, Rocket,
-  Dumbbell, ChevronDown, UserCircle, TrendingUp, ClipboardList, UtensilsCrossed, Sparkles, BookMarked, CheckSquare, Flame, Clock, Timer, Trophy, Landmark, BellRing } from 'lucide-react'
+  Dumbbell, ChevronDown, UserCircle, TrendingUp, ClipboardList, UtensilsCrossed, Sparkles, BookMarked, CheckSquare, Flame, Clock, Timer, Trophy, Landmark, BellRing, FileText } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useQuery } from '@tanstack/react-query'
 import { alertApi } from '../../services/api'
 import { Alert } from '../../types'
+import ThemeToggle from './ThemeToggle'
 
 const MAIN_NAV = [
   { to: '/',              icon: LayoutDashboard, label: 'Dashboard' },
@@ -17,6 +18,7 @@ const MAIN_NAV = [
   { to: '/metas',         icon: Target,           label: 'Metas' },
   { to: '/deudas',        icon: Landmark,         label: 'Deudas' },
   { to: '/estadisticas',  icon: BarChart2,        label: 'Estadísticas' },
+  { to: '/reportes',      icon: FileText,         label: 'Reportes' },
   { to: '/alertas',       icon: Bell,             label: 'Alertas', badge: true },
 ]
 
@@ -148,6 +150,7 @@ export default function Layout() {
 
       {/* User footer */}
       <div className="px-3 py-4 border-t border-white/10 space-y-1">
+        <ThemeToggle />
         <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
             {user?.name ? initials(user.name) : '?'}

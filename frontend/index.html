@@ -7,6 +7,15 @@
     <title>Control de Gastos</title>
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" href="/icon-192.png" />
+      <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme') || 'system';
+          var d = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (d) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

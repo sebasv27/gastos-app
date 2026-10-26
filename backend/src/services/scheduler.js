@@ -3,6 +3,12 @@ const prisma = require('../config/prisma')
 const emailService = require('./emailService')
 const logger = require('../config/logger')
 exports.scheduleJobs = () => {
+  // Día 1 de cada mes, 9 a. m. Colombia (14:00 UTC): reporte del mes anterior por Telegram
+  cron.schedule('0 14 1 * *', async () => {
+    try { await require('./reportService').sendMonthlyReports() }
+    catch (err) { logger.error('Reporte mensual: ' + err.message) }
+  })
+
   // 8 p. m. Colombia (01:00 UTC): aviso anticipado si la proyección supera un presupuesto
   cron.schedule('0 1 * * *', async () => {
     try { await require('./forecastService').checkForecastAlerts() }
