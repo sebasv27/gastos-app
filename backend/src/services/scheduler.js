@@ -3,6 +3,12 @@ const prisma = require('../config/prisma')
 const emailService = require('./emailService')
 const logger = require('../config/logger')
 exports.scheduleJobs = () => {
+  // 8 p. m. Colombia (01:00 UTC): aviso anticipado si la proyección supera un presupuesto
+  cron.schedule('0 1 * * *', async () => {
+    try { await require('./forecastService').checkForecastAlerts() }
+    catch (err) { logger.error('Proyección: ' + err.message) }
+  })
+
   // 8 a. m. Colombia (13:00 UTC): avisar pagos de deudas de mañana
   cron.schedule('0 13 * * *', async () => {
     try { await require('./pushService').checkDebtReminders() }

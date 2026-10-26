@@ -14,6 +14,7 @@ import AddTransactionModal from '../components/forms/AddTransactionModal'
 import BudgetProgressBar   from '../components/ui/BudgetProgressBar'
 import GoalCard            from '../components/ui/GoalCard'
 import api from '../services/api'
+import ForecastCard from '../components/dashboard/ForecastCard'
 import RecentTransactions from '../components/dashboard/RecentTransactions'
 
 // APIs locales
@@ -325,6 +326,8 @@ export default function DashboardPage() {
       )}
 
       {/* Transacciones recientes */}
+              <ForecastCard />
+
               <RecentTransactions transactions={d?.recent ?? []} onAdd={() => setShowAdd(true)} />
 
       {showAdd && <AddTransactionModal onClose={() => { setShowAdd(false); refetch() }} onSuccess={() => { setShowAdd(false); refetch() }} />}
